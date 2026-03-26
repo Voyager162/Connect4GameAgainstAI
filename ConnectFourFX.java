@@ -69,6 +69,7 @@ public class ConnectFourFX extends Application {
     private final char[][] board = new char[ROWS][COLUMNS];
     private final int[] heights = new int[COLUMNS];
     private final DoubleProperty favorBalance = new SimpleDoubleProperty(0.5);
+    private final List<Button> difficultyButtons = new ArrayList<Button>();
 
     private final Circle[][] discViews = new Circle[ROWS][COLUMNS];
     private final Rectangle[] hoverHighlights = new Rectangle[COLUMNS];
@@ -84,6 +85,7 @@ public class ConnectFourFX extends Application {
     private Animation activeMoveFeedbackAnimation;
     private Label activeMoveFeedbackLabel;
     private Animation activeFavorMeterAnimation;
+    private AiDifficulty selectedDifficulty = AiDifficulty.IMPOSSIBLE;
 
     private boolean humanTurn;
     private boolean busy;
@@ -295,18 +297,60 @@ public class ConnectFourFX extends Application {
     }
 
     private FlowPane buildControls() {
+        VBox difficultyPanel = buildDifficultySelector();
+
         restartButton = new Button();
         restartButton.getStyleClass().add("primary-button");
         restartButton.setOnAction(event -> startNewGame());
         refreshRestartButton();
 
-        FlowPane controls = new FlowPane(14, 12, restartButton);
+        FlowPane controls = new FlowPane(18, 14, difficultyPanel, restartButton);
         controls.getStyleClass().add("controls-row");
         controls.setAlignment(Pos.CENTER);
         controls.setRowValignment(javafx.geometry.VPos.CENTER);
         controls.setMaxWidth(Double.MAX_VALUE);
         controls.setPadding(new Insets(4, 0, 0, 0));
         return controls;
+    }
+
+    private VBox buildDifficultySelector() {
+        Label difficultyHeading = new Label("AI Difficulty");
+        difficultyHeading.getStyleClass().add("difficulty-heading");
+
+        HBox buttonsRow = new HBox(10);
+        buttonsRow.getStyleClass().add("difficulty-button-row");
+        buttonsRow.setAlignment(Pos.CENTER);
+
+        difficultyButtons.clear();
+        for (AiDifficulty difficulty : AiDifficulty.values()) {
+            Button button = new Button(difficulty.label);
+            button.getStyleClass().addAll("secondary-button", "difficulty-button");
+            button.setOnAction(event -> setSelectedDifficulty(difficulty));
+            difficultyButtons.add(button);
+            buttonsRow.getChildren().add(button);
+        }
+
+        refreshDifficultyButtons();
+
+        VBox panel = new VBox(10, difficultyHeading, buttonsRow);
+        panel.getStyleClass().add("difficulty-panel");
+        panel.setAlignment(Pos.CENTER);
+        return panel;
+    }
+
+    private void setSelectedDifficulty(AiDifficulty difficulty) {
+        selectedDifficulty = difficulty;
+        refreshDifficultyButtons();
+    }
+
+    private void refreshDifficultyButtons() {
+        for (int index = 0; index < difficultyButtons.size(); index++) {
+            Button button = difficultyButtons.get(index);
+            button.getStyleClass().remove("difficulty-button-selected");
+            if (AiDifficulty.values()[index] == selectedDifficulty) {
+                button.getStyleClass().add("difficulty-button-selected");
+            }
+        }
     }
 
     private StackPane buildBoardView() {
@@ -606,12 +650,13 @@ public class ConnectFourFX extends Application {
 
             final char[][] boardCopy = cloneBoard(board);
             final int[] heightsCopy = heights.clone();
-            final int searchDepth = chooseSearchDepth(heightsCopy);
+            final AiDifficulty aiDifficulty = selectedDifficulty;
+            final int searchDepth = chooseAiSearchDepth(heightsCopy, aiDifficulty);
 
             Task<AiChoice> aiTask = new Task<AiChoice>() {
                 @Override
                 protected AiChoice call() {
-                    return chooseBestMove(boardCopy, heightsCopy, searchDepth);
+                    return chooseAiMove(boardCopy, heightsCopy, searchDepth, aiDifficulty);
                 }
             };
 
@@ -622,7 +667,7 @@ public class ConnectFourFX extends Application {
 
                 AiChoice choice = aiTask.getValue();
                 detailLabel.setText(
-                    "AI searched " + searchDepth + " plies and lined up column " + (choice.column + 1) + "."
+                    aiDifficulty.label + " searched " + searchDepth + " plies and lined up column " + (choice.column + 1) + "."
                 );
                 animateMove(choice.column, AI_MARK, token, new Runnable() {
                     @Override
@@ -1149,7 +1194,7 @@ public class ConnectFourFX extends Application {
 
     private MoveFeedback analyzeHumanMove(char[][] boardState, int[] columnHeights, int chosenColumn, int searchDepth) {
         List<Integer> playableColumns = getPlayableColumns(columnHeights);
-        List<MoveOption> moveOptions = new ArrayList<MoveOption>();
+        List<MoveOption> moveOptions = new ArrayList<>();
 
         for (int column : playableColumns) {
             moveOptions.add(analyzeHumanCandidateMove(boardState, columnHeights, column, searchDepth));
@@ -1323,6 +1368,102 @@ public class ConnectFourFX extends Application {
         );
     }
 
+    private int chooseAiSearchDepth(int[] columnHeights, AiDifficulty difficulty) {
+        int baseDepth = chooseSearchDepth(columnHeights);
+        return Math.max(difficulty.minimumSearchDepth, baseDepth + difficulty.depthOffset);
+    }
+
+    private AiChoice chooseAiMove(char[][] boardState, int[] columnHeights, int searchDepth, AiDifficulty difficulty) {
+        List<Integer> aiWinningMoves = getImmediateWinningMoves(boardState, columnHeights, AI_MARK);
+        if (!aiWinningMoves.isEmpty()) {
+            return new AiChoice(aiWinningMoves.get(0).intValue(), MAX_SCORE);
+        }
+
+        List<Integer> humanWinningMoves = getImmediateWinningMoves(boardState, columnHeights, HUMAN_MARK);
+        if (humanWinningMoves.size() == 1) {
+            int blockingColumn = humanWinningMoves.get(0).intValue();
+            if (difficulty.blockChance >= 1.0 || random.nextDouble() < difficulty.blockChance) {
+                return new AiChoice(blockingColumn, 0);
+            }
+            return chooseImperfectAiMove(boardState, columnHeights, searchDepth, difficulty, blockingColumn);
+        }
+
+        if (difficulty == AiDifficulty.IMPOSSIBLE || difficulty == AiDifficulty.HARD) {
+            return chooseBestMove(boardState, columnHeights, searchDepth);
+        }
+
+        return chooseImperfectAiMove(boardState, columnHeights, searchDepth, difficulty, -1);
+    }
+
+    private AiChoice chooseImperfectAiMove(
+        char[][] boardState,
+        int[] columnHeights,
+        int searchDepth,
+        AiDifficulty difficulty,
+        int excludedColumn
+    ) {
+        List<AiChoice> rankedMoves = evaluateAiMoves(boardState, columnHeights, searchDepth, excludedColumn);
+        if (rankedMoves.isEmpty()) {
+            rankedMoves = evaluateAiMoves(boardState, columnHeights, searchDepth, -1);
+        }
+        if (rankedMoves.isEmpty() || rankedMoves.size() == 1 || difficulty.bestMoveChance >= 1.0) {
+            return rankedMoves.get(0);
+        }
+
+        int shortlistSize = Math.min(difficulty.candidateWindow, rankedMoves.size());
+        if (random.nextDouble() < difficulty.bestMoveChance) {
+            return rankedMoves.get(0);
+        }
+
+        return rankedMoves.get(1 + random.nextInt(shortlistSize - 1));
+    }
+
+    private List<AiChoice> evaluateAiMoves(
+        char[][] boardState,
+        int[] columnHeights,
+        int searchDepth,
+        int excludedColumn
+    ) {
+        List<AiChoice> choices = new ArrayList<AiChoice>();
+
+        for (int column : getPlayableColumns(columnHeights)) {
+            if (column == excludedColumn) {
+                continue;
+            }
+
+            int row = dropPiece(boardState, columnHeights, column, AI_MARK);
+            int score;
+
+            if (isWinningMove(boardState, row, column, AI_MARK)) {
+                score = MAX_SCORE;
+            } else if (isBoardFull(columnHeights)) {
+                score = 0;
+            } else {
+                score = minimax(boardState, columnHeights, searchDepth - 1, false, Integer.MIN_VALUE, Integer.MAX_VALUE);
+            }
+
+            undoMove(boardState, columnHeights, column);
+            choices.add(new AiChoice(column, score));
+        }
+
+        choices.sort((left, right) -> {
+            if (left.score != right.score) {
+                return Integer.compare(right.score, left.score);
+            }
+            return Integer.compare(columnPreferenceIndex(left.column), columnPreferenceIndex(right.column));
+        });
+        return choices;
+    }
+
+    private int columnPreferenceIndex(int column) {
+        for (int index = 0; index < COLUMN_ORDER.length; index++) {
+            if (COLUMN_ORDER[index] == column) {
+                return index;
+            }
+        }
+        return COLUMN_ORDER.length;
+    }
+
     private AiChoice chooseBestMove(char[][] boardState, int[] columnHeights, int searchDepth) {
         List<Integer> aiWinningMoves = getImmediateWinningMoves(boardState, columnHeights, AI_MARK);
         if (!aiWinningMoves.isEmpty()) {
@@ -1331,7 +1472,7 @@ public class ConnectFourFX extends Application {
 
         List<Integer> humanWinningMoves = getImmediateWinningMoves(boardState, columnHeights, HUMAN_MARK);
         if (humanWinningMoves.size() == 1) {
-            return new AiChoice(humanWinningMoves.get(0).intValue(), 0);
+            return new AiChoice(humanWinningMoves.get(0), 0);
         }
 
         int bestColumn = -1;
@@ -1709,6 +1850,36 @@ public class ConnectFourFX extends Application {
             System.arraycopy(source[row], 0, copy[row], 0, COLUMNS);
         }
         return copy;
+    }
+
+    private enum AiDifficulty {
+        EASY("Easy", 0.75, -3, 3, 0.52, 4),
+        MEDIUM("Medium", 0.90, -2, 4, 0.78, 3),
+        HARD("Hard", 1.00, -1, 5, 1.00, 1),
+        IMPOSSIBLE("Impossible", 1.00, 0, 6, 1.00, 1);
+
+        private final String label;
+        private final double blockChance;
+        private final int depthOffset;
+        private final int minimumSearchDepth;
+        private final double bestMoveChance;
+        private final int candidateWindow;
+
+        private AiDifficulty(
+            String label,
+            double blockChance,
+            int depthOffset,
+            int minimumSearchDepth,
+            double bestMoveChance,
+            int candidateWindow
+        ) {
+            this.label = label;
+            this.blockChance = blockChance;
+            this.depthOffset = depthOffset;
+            this.minimumSearchDepth = minimumSearchDepth;
+            this.bestMoveChance = bestMoveChance;
+            this.candidateWindow = candidateWindow;
+        }
     }
 
     private static class AiChoice {

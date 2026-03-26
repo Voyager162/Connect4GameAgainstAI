@@ -164,7 +164,13 @@ try {
         if ($env:OS -eq "Windows_NT") {
             $JavaFxClassifier = "win"
         } elseif ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::OSX)) {
-            $JavaFxClassifier = "mac"
+            # Detect CPU architecture on macOS
+            $arch = $([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)
+            if ($arch -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
+                $JavaFxClassifier = "mac-aarch64"
+            } else {
+                $JavaFxClassifier = "mac"
+            }
         } else {
             throw "Could not infer a JavaFX classifier for this operating system."
         }

@@ -58,6 +58,28 @@
     -fx-padding: 4 0 0 0;
 }
 
+.difficulty-panel {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+        rgba(9, 16, 31, 0.62);
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 24, 23;
+    -fx-border-color: rgba(180, 226, 255, 0.14);
+    -fx-border-radius: 24;
+    -fx-padding: 12 14 12 14;
+}
+
+.difficulty-heading {
+    -fx-font-family: "Trebuchet MS";
+    -fx-text-fill: rgba(214, 236, 255, 0.78);
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+}
+
+.difficulty-button-row {
+    -fx-alignment: center;
+}
+
 .eyebrow-label {
     -fx-font-family: "Trebuchet MS";
     -fx-text-fill: #8ee8ff;
@@ -171,6 +193,22 @@
     -fx-background-color:
         linear-gradient(to bottom, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
         rgba(255, 255, 255, 0.08);
+}
+
+.difficulty-button {
+    -fx-min-width: 108px;
+}
+
+.difficulty-button-selected {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.04)),
+        linear-gradient(to bottom right, #52d2ff 0%, #2e7dff 100%);
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 20, 19;
+    -fx-border-color: rgba(225, 244, 255, 0.24);
+    -fx-border-radius: 20;
+    -fx-text-fill: #f8fbff;
+    -fx-effect: dropshadow(gaussian, rgba(60, 150, 255, 0.24), 18, 0.24, 0, 8);
 }
 
 .move-feedback-popup {
