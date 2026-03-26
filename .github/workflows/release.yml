@@ -18,9 +18,6 @@ jobs:
           - os: windows-latest
             javafx_classifier: win
             artifact_name: connect-four-fx-windows-x64
-          - os: macos-13
-            javafx_classifier: mac
-            artifact_name: connect-four-fx-macos-x64
           - os: macos-14
             javafx_classifier: mac-aarch64
             artifact_name: connect-four-fx-macos-arm64
