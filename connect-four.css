@@ -94,15 +94,35 @@
     -fx-background-color: rgba(255, 255, 255, 0.12);
 }
 
-.chip-label {
-    -fx-background-color: rgba(75, 214, 255, 0.10);
-    -fx-background-radius: 999;
-    -fx-border-color: rgba(126, 225, 255, 0.24);
-    -fx-border-radius: 999;
-    -fx-text-fill: #bceeff;
-    -fx-font-size: 12px;
-    -fx-font-weight: 700;
-    -fx-padding: 11 16 11 16;
+.move-feedback-popup {
+    -fx-font-size: 30px;
+    -fx-font-weight: 900;
+    -fx-padding: 4 10 4 10;
+}
+
+.grade-perfect {
+    -fx-text-fill: #9edcff;
+    -fx-effect: dropshadow(gaussian, rgba(56, 146, 255, 0.95), 24, 0.78, 0, 0);
+}
+
+.grade-amazing {
+    -fx-text-fill: #a9ffbf;
+    -fx-effect: dropshadow(gaussian, rgba(60, 195, 94, 0.92), 24, 0.78, 0, 0);
+}
+
+.grade-average {
+    -fx-text-fill: #565d69;
+    -fx-effect: dropshadow(gaussian, rgba(37, 42, 48, 0.82), 18, 0.72, 0, 0);
+}
+
+.grade-bad {
+    -fx-text-fill: #ff9e9e;
+    -fx-effect: dropshadow(gaussian, rgba(235, 60, 60, 0.92), 24, 0.78, 0, 0);
+}
+
+.grade-blunder {
+    -fx-text-fill: #c96464;
+    -fx-effect: dropshadow(gaussian, rgba(120, 0, 0, 0.90), 24, 0.80, 0, 0);
 }
 
 .column-label {

@@ -79,6 +79,9 @@ public class ConnectFourFX extends Application {
     private Label detailLabel;
     private Label favorLabel;
     private Button restartButton;
+    private MovePopup pendingMovePopup;
+    private Animation activeMoveFeedbackAnimation;
+    private Label activeMoveFeedbackLabel;
 
     private boolean humanTurn;
     private boolean busy;
@@ -248,7 +251,14 @@ public class ConnectFourFX extends Application {
         legend.setAlignment(Pos.CENTER);
         legend.setMaxWidth(Double.MAX_VALUE);
 
-        VBox card = new VBox(8, statusLabel, detailLabel, favorHeading, meterPane, legend);
+        VBox card = new VBox(
+            8,
+            statusLabel,
+            detailLabel,
+            favorHeading,
+            meterPane,
+            legend
+        );
         card.getStyleClass().add("glass-card");
         card.setAlignment(Pos.CENTER);
         card.setPadding(new Insets(18, 24, 18, 24));
@@ -494,12 +504,20 @@ public class ConnectFourFX extends Application {
             return;
         }
 
+        final long token = gameToken;
+        final char[][] boardSnapshot = cloneBoard(board);
+        final int[] heightsSnapshot = heights.clone();
+        final int reviewDepth = chooseSearchDepth(heightsSnapshot);
+        final int reviewRow = ROWS - 1 - heightsSnapshot[column];
+
         busy = true;
         hoveredColumn = column;
+        pendingMovePopup = new MovePopup(token, reviewRow, column);
         updateHoverState();
         setStatus("You played column " + (column + 1), "Dropping your disc into the board.");
+        queueHumanMoveReview(token, boardSnapshot, heightsSnapshot, column, reviewDepth);
 
-        animateMove(column, HUMAN_MARK, gameToken, new Runnable() {
+        animateMove(column, HUMAN_MARK, token, new Runnable() {
             @Override
             public void run() {
                 afterMoveResolved(HUMAN_MARK);
@@ -577,6 +595,39 @@ public class ConnectFourFX extends Application {
         pendingAiDelay.play();
     }
 
+    private void queueHumanMoveReview(
+        final long token,
+        final char[][] boardSnapshot,
+        final int[] heightsSnapshot,
+        final int chosenColumn,
+        final int searchDepth
+    ) {
+        Task<MoveFeedback> reviewTask = new Task<MoveFeedback>() {
+            @Override
+            protected MoveFeedback call() {
+                return analyzeHumanMove(boardSnapshot, heightsSnapshot, chosenColumn, searchDepth);
+            }
+        };
+
+        reviewTask.setOnSucceeded(workerStateEvent -> {
+            if (token != gameToken) {
+                return;
+            }
+            recordMoveFeedback(token, chosenColumn, reviewTask.getValue());
+        });
+
+        reviewTask.setOnFailed(workerStateEvent -> {
+            if (token != gameToken) {
+                return;
+            }
+            clearPendingMovePopup(token, chosenColumn);
+        });
+
+        Thread reviewThread = new Thread(reviewTask, "connect-four-move-review");
+        reviewThread.setDaemon(true);
+        reviewThread.start();
+    }
+
     private void animateMove(final int column, final char mark, final long token, final Runnable onFinished) {
         final int row = dropPiece(board, heights, column, mark);
         final Circle flyingDisc = createDiscNode(mark, false);
@@ -614,6 +665,9 @@ public class ConnectFourFX extends Application {
 
             applyDiscStyle(discViews[row][column], mark, false, false);
             updateWinOutlook();
+            if (mark == HUMAN_MARK) {
+                markMovePopupSettled(token, row, column);
+            }
             if (isWinningMove(board, row, column, mark)) {
                 gameOver = true;
                 busy = false;
@@ -735,6 +789,8 @@ public class ConnectFourFX extends Application {
             activeDropAnimation.stop();
             activeDropAnimation = null;
         }
+        clearActiveMoveFeedbackPopup();
+        pendingMovePopup = null;
         if (animationLayer != null) {
             animationLayer.getChildren().clear();
         }
@@ -755,6 +811,148 @@ public class ConnectFourFX extends Application {
     private void setStatus(String headline, String details) {
         statusLabel.setText(headline);
         detailLabel.setText(details);
+    }
+
+    private void recordMoveFeedback(long token, int column, MoveFeedback feedback) {
+        if (pendingMovePopup == null || pendingMovePopup.token != token || pendingMovePopup.column != column) {
+            return;
+        }
+
+        pendingMovePopup.feedback = feedback;
+        maybeShowPendingMovePopup();
+    }
+
+    private void clearPendingMovePopup(long token, int column) {
+        if (pendingMovePopup == null || pendingMovePopup.token != token || pendingMovePopup.column != column) {
+            return;
+        }
+
+        pendingMovePopup = null;
+    }
+
+    private void markMovePopupSettled(long token, int row, int column) {
+        if (pendingMovePopup == null
+            || pendingMovePopup.token != token
+            || pendingMovePopup.row != row
+            || pendingMovePopup.column != column) {
+            return;
+        }
+
+        pendingMovePopup.discSettled = true;
+        maybeShowPendingMovePopup();
+    }
+
+    private void maybeShowPendingMovePopup() {
+        if (pendingMovePopup == null || pendingMovePopup.feedback == null || !pendingMovePopup.discSettled) {
+            return;
+        }
+
+        MovePopup popup = pendingMovePopup;
+        pendingMovePopup = null;
+        showMoveFeedbackPopup(popup.feedback, popup.row, popup.column);
+    }
+
+    private void showMoveFeedbackPopup(MoveFeedback feedback, int row, int column) {
+        if (animationLayer == null) {
+            return;
+        }
+
+        clearActiveMoveFeedbackPopup();
+
+        Label popup = new Label(feedback.headline);
+        popup.getStyleClass().addAll("move-feedback-popup", feedback.styleClass);
+        popup.setManaged(false);
+        popup.setMouseTransparent(true);
+        popup.setRotate(-35.0 + random.nextDouble() * 70.0);
+
+        animationLayer.getChildren().add(popup);
+        popup.applyCss();
+        popup.autosize();
+
+        double popupWidth = popup.prefWidth(-1);
+        double popupHeight = popup.prefHeight(-1);
+        double[] popupPosition = chooseMoveFeedbackPopupPosition(row, column, popupWidth, popupHeight);
+        double x = popupPosition[0];
+        double y = popupPosition[1];
+        popup.relocate(x, y);
+        popup.setOpacity(0.0);
+
+        Timeline popupAnimation = new Timeline(
+            new KeyFrame(Duration.ZERO, new KeyValue(popup.opacityProperty(), 0.0)),
+            new KeyFrame(Duration.seconds(0.2), new KeyValue(popup.opacityProperty(), 1.0, Interpolator.EASE_OUT)),
+            new KeyFrame(Duration.seconds(1.7), new KeyValue(popup.opacityProperty(), 1.0)),
+            new KeyFrame(Duration.seconds(2.2), new KeyValue(popup.opacityProperty(), 0.0, Interpolator.EASE_IN))
+        );
+
+        activeMoveFeedbackLabel = popup;
+        activeMoveFeedbackAnimation = popupAnimation;
+        popupAnimation.setOnFinished(event -> {
+            if (animationLayer != null) {
+                animationLayer.getChildren().remove(popup);
+            }
+            if (activeMoveFeedbackLabel == popup) {
+                activeMoveFeedbackLabel = null;
+            }
+            if (activeMoveFeedbackAnimation == popupAnimation) {
+                activeMoveFeedbackAnimation = null;
+            }
+        });
+        popupAnimation.play();
+    }
+
+    private double[] chooseMoveFeedbackPopupPosition(int row, int column, double popupWidth, double popupHeight) {
+        double centerX = columnCenterX(column);
+        double centerY = rowCenterY(row);
+        double minX = BOARD_X + 8.0;
+        double maxX = BOARD_X + BOARD_WIDTH - popupWidth - 8.0;
+        double minY = BOARD_Y + 8.0;
+        double maxY = BOARD_Y + BOARD_HEIGHT - popupHeight - 8.0;
+        double safetyRadius = DISC_RADIUS + 10.0;
+
+        for (int attempt = 0; attempt < 24; attempt++) {
+            double angle = random.nextDouble() * Math.PI * 2.0;
+            double radius = DISC_RADIUS + 26.0 + random.nextDouble() * 44.0;
+            double candidateX = centerX + Math.cos(angle) * radius - popupWidth / 2.0;
+            double candidateY = centerY + Math.sin(angle) * radius - popupHeight / 2.0;
+            double x = clamp(candidateX, minX, maxX);
+            double y = clamp(candidateY, minY, maxY);
+
+            if (!doesPopupOverlapDisc(x, y, popupWidth, popupHeight, centerX, centerY, safetyRadius)) {
+                return new double[] {x, y};
+            }
+        }
+
+        double fallbackX = clamp(centerX + DISC_RADIUS + 28.0, minX, maxX);
+        double fallbackY = clamp(centerY - popupHeight - DISC_RADIUS + 6.0, minY, maxY);
+        return new double[] {fallbackX, fallbackY};
+    }
+
+    private boolean doesPopupOverlapDisc(
+        double popupX,
+        double popupY,
+        double popupWidth,
+        double popupHeight,
+        double discCenterX,
+        double discCenterY,
+        double discRadius
+    ) {
+        double nearestX = clamp(discCenterX, popupX, popupX + popupWidth);
+        double nearestY = clamp(discCenterY, popupY, popupY + popupHeight);
+        double deltaX = discCenterX - nearestX;
+        double deltaY = discCenterY - nearestY;
+        return deltaX * deltaX + deltaY * deltaY < discRadius * discRadius;
+    }
+
+    private void clearActiveMoveFeedbackPopup() {
+        if (activeMoveFeedbackAnimation != null) {
+            activeMoveFeedbackAnimation.stop();
+            activeMoveFeedbackAnimation = null;
+        }
+
+        if (activeMoveFeedbackLabel != null && animationLayer != null) {
+            animationLayer.getChildren().remove(activeMoveFeedbackLabel);
+        }
+        activeMoveFeedbackLabel = null;
     }
 
     private double columnCenterX(int column) {
@@ -860,6 +1058,138 @@ public class ConnectFourFX extends Application {
 
     private double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    private MoveFeedback analyzeHumanMove(char[][] boardState, int[] columnHeights, int chosenColumn, int searchDepth) {
+        List<Integer> playableColumns = getPlayableColumns(columnHeights);
+        List<MoveOption> moveOptions = new ArrayList<MoveOption>();
+
+        for (int column : playableColumns) {
+            int score = scoreHumanCandidateMove(boardState, columnHeights, column, searchDepth);
+            moveOptions.add(new MoveOption(column, score));
+        }
+
+        MoveOption bestMove = moveOptions.get(0);
+        MoveOption worstMove = moveOptions.get(0);
+        MoveOption chosenMove = moveOptions.get(0);
+        int betterMoveCount = 0;
+
+        for (MoveOption option : moveOptions) {
+            if (option.score < bestMove.score) {
+                bestMove = option;
+            }
+            if (option.score > worstMove.score) {
+                worstMove = option;
+            }
+            if (option.column == chosenColumn) {
+                chosenMove = option;
+            }
+        }
+
+        for (MoveOption option : moveOptions) {
+            if (option.score < chosenMove.score) {
+                betterMoveCount++;
+            }
+        }
+
+        return describeHumanMove(
+            chosenMove.score,
+            bestMove.score,
+            worstMove.score,
+            betterMoveCount,
+            playableColumns.size()
+        );
+    }
+
+    private int scoreHumanCandidateMove(char[][] boardState, int[] columnHeights, int column, int searchDepth) {
+        int row = dropPiece(boardState, columnHeights, column, HUMAN_MARK);
+        int score;
+
+        if (isWinningMove(boardState, row, column, HUMAN_MARK)) {
+            score = -MAX_SCORE - searchDepth;
+        } else if (isBoardFull(columnHeights)) {
+            score = 0;
+        } else {
+            score = minimax(boardState, columnHeights, searchDepth - 1, true, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        }
+
+        undoMove(boardState, columnHeights, column);
+        return score;
+    }
+
+    private MoveFeedback describeHumanMove(
+        int chosenScore,
+        int bestScore,
+        int worstScore,
+        int betterMoveCount,
+        int legalMoveCount
+    ) {
+        int rank = betterMoveCount + 1;
+        int scoreLoss = Math.max(0, chosenScore - bestScore);
+        int scoreRange = Math.max(0, worstScore - bestScore);
+        double lossRatio = scoreRange == 0 ? 0.0 : (double) scoreLoss / (double) scoreRange;
+        int nearWorstRank = Math.max(legalMoveCount - 1, 2);
+        boolean nearBestMove = scoreLoss <= 180
+            || lossRatio <= 0.20
+            || (rank <= 2 && scoreLoss <= 320 && lossRatio <= 0.35);
+        boolean nearWorstMove = rank >= nearWorstRank
+            && (scoreLoss >= 1_200 || (lossRatio >= 0.88 && scoreRange >= 250));
+        boolean hurtsPosition = lossRatio >= 0.60
+            || scoreLoss >= 650
+            || (rank >= nearWorstRank && scoreLoss >= 350);
+
+        if (chosenScore == bestScore) {
+            if (chosenScore <= -MAX_SCORE / 2) {
+                return new MoveFeedback(
+                    "Perfect",
+                    "grade-perfect"
+                );
+            }
+            return new MoveFeedback(
+                "Perfect",
+                "grade-perfect"
+            );
+        }
+
+        if (chosenScore >= MAX_SCORE / 2 && bestScore < MAX_SCORE / 2) {
+            return new MoveFeedback(
+                "Blunder",
+                "grade-blunder"
+            );
+        }
+
+        if (bestScore <= -MAX_SCORE / 2 && chosenScore > -MAX_SCORE / 2) {
+            return new MoveFeedback(
+                "Blunder",
+                "grade-blunder"
+            );
+        }
+
+        if (nearBestMove) {
+            return new MoveFeedback(
+                "Amazing",
+                "grade-amazing"
+            );
+        }
+
+        if (nearWorstMove) {
+            return new MoveFeedback(
+                "Blunder",
+                "grade-blunder"
+            );
+        }
+
+        if (hurtsPosition) {
+            return new MoveFeedback(
+                "Bad",
+                "grade-bad"
+            );
+        }
+
+        return new MoveFeedback(
+            "Average",
+            "grade-average"
+        );
     }
 
     private AiChoice chooseBestMove(char[][] boardState, int[] columnHeights, int searchDepth) {
@@ -1257,6 +1587,40 @@ public class ConnectFourFX extends Application {
         private AiChoice(int column, int score) {
             this.column = column;
             this.score = score;
+        }
+    }
+
+    private static class MoveOption {
+        private final int column;
+        private final int score;
+
+        private MoveOption(int column, int score) {
+            this.column = column;
+            this.score = score;
+        }
+    }
+
+    private static class MovePopup {
+        private final long token;
+        private final int row;
+        private final int column;
+        private boolean discSettled;
+        private MoveFeedback feedback;
+
+        private MovePopup(long token, int row, int column) {
+            this.token = token;
+            this.row = row;
+            this.column = column;
+        }
+    }
+
+    private static class MoveFeedback {
+        private final String headline;
+        private final String styleClass;
+
+        private MoveFeedback(String headline, String styleClass) {
+            this.headline = headline;
+            this.styleClass = styleClass;
         }
     }
 
