@@ -1,132 +1,221 @@
 .root-pane {
     -fx-background-color:
-        radial-gradient(center 20% 10%, radius 90%, rgba(55, 152, 255, 0.22), transparent 60%),
-        linear-gradient(to bottom, #081229 0%, #0b1431 45%, #070d1d 100%);
+        radial-gradient(center 14% 12%, radius 54%, rgba(76, 212, 255, 0.22), transparent 62%),
+        radial-gradient(center 84% 18%, radius 48%, rgba(255, 156, 96, 0.16), transparent 66%),
+        radial-gradient(center 52% 100%, radius 70%, rgba(43, 103, 255, 0.18), transparent 68%),
+        linear-gradient(to bottom, #040814 0%, #07101d 34%, #091423 68%, #03070f 100%);
+}
+
+.app-shell {
+    -fx-spacing: 22px;
+}
+
+.hero-stack {
+    -fx-spacing: 18px;
+}
+
+.hero-block {
+    -fx-padding: 6 0 2 0;
 }
 
 .glass-card {
-    -fx-background-color: rgba(10, 23, 58, 0.68);
-    -fx-background-radius: 28;
-    -fx-border-color: rgba(184, 226, 255, 0.18);
-    -fx-border-radius: 28;
+    -fx-background-color:
+        linear-gradient(to bottom right, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02)),
+        linear-gradient(to bottom, rgba(16, 27, 49, 0.94), rgba(7, 12, 23, 0.90));
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 32, 31;
+    -fx-border-color: rgba(184, 226, 255, 0.16);
+    -fx-border-radius: 32;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.34), 42, 0.22, 0, 16);
+}
+
+.status-card {
+    -fx-background-color:
+        linear-gradient(to bottom right, rgba(83, 210, 255, 0.08), rgba(255, 255, 255, 0.02)),
+        linear-gradient(to bottom, rgba(13, 24, 43, 0.96), rgba(8, 13, 24, 0.92));
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 30, 29;
+    -fx-border-color: rgba(190, 229, 255, 0.18);
+    -fx-border-radius: 30;
+}
+
+.board-card {
+    -fx-background-color:
+        linear-gradient(to bottom right, rgba(67, 190, 255, 0.12), rgba(255, 255, 255, 0.02)),
+        linear-gradient(to bottom, rgba(10, 18, 34, 0.98), rgba(6, 10, 18, 0.96));
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 38, 37;
+    -fx-border-color: rgba(194, 233, 255, 0.15);
+    -fx-border-radius: 38;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.44), 54, 0.22, 0, 18);
+}
+
+.board-wrapper {
+    -fx-padding: 10 8 10 8;
+}
+
+.controls-row {
+    -fx-padding: 4 0 0 0;
 }
 
 .eyebrow-label {
-    -fx-text-fill: #8fe7ff;
+    -fx-font-family: "Trebuchet MS";
+    -fx-text-fill: #8ee8ff;
     -fx-font-size: 12px;
-    -fx-font-weight: 700;
-    -fx-letter-spacing: 1.5px;
+    -fx-font-weight: 800;
 }
 
 .title-label {
-    -fx-text-fill: white;
+    -fx-font-family: "Trebuchet MS";
+    -fx-text-fill: linear-gradient(to right, #f7fbff 0%, #a8eaff 44%, #ffd295 100%);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.34), 22, 0.24, 0, 8);
 }
 
 .subtitle-label {
-    -fx-text-fill: rgba(225, 241, 255, 0.82);
+    -fx-font-family: "Trebuchet MS";
+    -fx-text-fill: rgba(221, 236, 255, 0.78);
     -fx-font-size: 15px;
-    -fx-font-weight: 500;
+    -fx-font-weight: 600;
 }
 
 .status-label {
-    -fx-text-fill: white;
-    -fx-font-size: 26px;
+    -fx-font-family: "Trebuchet MS";
+    -fx-text-fill: #f8fbff;
+    -fx-font-size: 31px;
     -fx-font-weight: 800;
 }
 
 .detail-label {
-    -fx-text-fill: rgba(214, 235, 255, 0.78);
+    -fx-font-family: "Trebuchet MS";
+    -fx-text-fill: rgba(214, 233, 255, 0.76);
     -fx-font-size: 14px;
-    -fx-font-weight: 500;
+    -fx-font-weight: 600;
 }
 
 .meter-heading {
-    -fx-text-fill: rgba(167, 229, 255, 0.88);
-    -fx-font-size: 12px;
+    -fx-font-family: "Trebuchet MS";
+    -fx-text-fill: rgba(160, 229, 255, 0.84);
+    -fx-font-size: 11px;
     -fx-font-weight: 800;
-    -fx-letter-spacing: 1.2px;
-    -fx-padding: 6 0 0 0;
+    -fx-padding: 8 0 0 0;
 }
 
 .meter-label {
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
-    -fx-font-weight: 700;
+    -fx-font-family: "Trebuchet MS";
+    -fx-text-fill: #f8fbff;
+    -fx-font-size: 15px;
+    -fx-font-weight: 800;
 }
 
 .meter-side-label {
-    -fx-text-fill: rgba(201, 230, 255, 0.72);
-    -fx-font-size: 12px;
-    -fx-font-weight: 700;
+    -fx-font-family: "Trebuchet MS";
+    -fx-text-fill: rgba(201, 226, 251, 0.64);
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
 }
 
 .meter-pane {
-    -fx-padding: 6 4 4 4;
+    -fx-padding: 8 6 4 6;
+}
+
+.meter-legend {
+    -fx-padding: 3 2 0 2;
 }
 
 .primary-button {
-    -fx-background-color: linear-gradient(to bottom right, #ffd36a 0%, #ff9b42 100%);
-    -fx-background-radius: 18;
-    -fx-text-fill: #1f1808;
+    -fx-font-family: "Trebuchet MS";
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.00)),
+        linear-gradient(to bottom right, #f6d681 0%, #ff9954 100%);
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 20, 19;
+    -fx-text-fill: #1a1208;
     -fx-font-size: 14px;
     -fx-font-weight: 800;
-    -fx-padding: 12 20 12 20;
+    -fx-padding: 13 24 13 24;
+    -fx-border-color: rgba(255, 243, 217, 0.20);
+    -fx-border-radius: 20;
     -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(255, 146, 66, 0.28), 20, 0.26, 0, 10);
 }
 
 .primary-button:hover {
-    -fx-background-color: linear-gradient(to bottom right, #ffe08f 0%, #ffae58 100%);
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.40), rgba(255, 255, 255, 0.04)),
+        linear-gradient(to bottom right, #ffe19a 0%, #ffab66 100%);
+}
+
+.primary-button:pressed {
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.00)),
+        linear-gradient(to bottom right, #efc765 0%, #f78d48 100%);
 }
 
 .secondary-button {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
-    -fx-background-radius: 18;
-    -fx-text-fill: white;
+    -fx-font-family: "Trebuchet MS";
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+        rgba(255, 255, 255, 0.05);
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 20, 19;
+    -fx-text-fill: #eff6ff;
     -fx-font-size: 14px;
     -fx-font-weight: 700;
     -fx-padding: 12 18 12 18;
-    -fx-border-color: rgba(173, 228, 255, 0.22);
-    -fx-border-radius: 18;
+    -fx-border-color: rgba(180, 226, 255, 0.18);
+    -fx-border-radius: 20;
     -fx-cursor: hand;
 }
 
 .secondary-button:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
+        rgba(255, 255, 255, 0.08);
 }
 
 .move-feedback-popup {
-    -fx-font-size: 30px;
+    -fx-font-family: "Trebuchet MS";
+    -fx-font-size: 34px;
     -fx-font-weight: 900;
     -fx-padding: 4 10 4 10;
 }
 
 .grade-perfect {
-    -fx-text-fill: #9edcff;
-    -fx-effect: dropshadow(gaussian, rgba(56, 146, 255, 0.95), 24, 0.78, 0, 0);
+    -fx-text-fill: #a4e1ff;
+    -fx-effect: dropshadow(gaussian, rgba(63, 157, 255, 0.96), 26, 0.80, 0, 0);
 }
 
 .grade-amazing {
-    -fx-text-fill: #a9ffbf;
-    -fx-effect: dropshadow(gaussian, rgba(60, 195, 94, 0.92), 24, 0.78, 0, 0);
+    -fx-text-fill: #a8ffc0;
+    -fx-effect: dropshadow(gaussian, rgba(62, 198, 106, 0.94), 26, 0.80, 0, 0);
 }
 
 .grade-average {
-    -fx-text-fill: #565d69;
-    -fx-effect: dropshadow(gaussian, rgba(37, 42, 48, 0.82), 18, 0.72, 0, 0);
+    -fx-text-fill: #5b6270;
+    -fx-effect: dropshadow(gaussian, rgba(30, 34, 41, 0.84), 18, 0.72, 0, 0);
 }
 
 .grade-bad {
-    -fx-text-fill: #ff9e9e;
-    -fx-effect: dropshadow(gaussian, rgba(235, 60, 60, 0.92), 24, 0.78, 0, 0);
+    -fx-text-fill: #ff9d9d;
+    -fx-effect: dropshadow(gaussian, rgba(233, 68, 68, 0.92), 24, 0.78, 0, 0);
 }
 
 .grade-blunder {
-    -fx-text-fill: #c96464;
-    -fx-effect: dropshadow(gaussian, rgba(120, 0, 0, 0.90), 24, 0.80, 0, 0);
+    -fx-text-fill: #c76262;
+    -fx-effect: dropshadow(gaussian, rgba(116, 0, 0, 0.92), 24, 0.80, 0, 0);
 }
 
 .column-label {
-    -fx-text-fill: rgba(234, 247, 255, 0.92);
-    -fx-font-size: 18px;
+    -fx-font-family: "Trebuchet MS";
+    -fx-text-fill: rgba(244, 250, 255, 0.96);
+    -fx-font-size: 14px;
     -fx-font-weight: 800;
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.04)),
+        rgba(8, 18, 38, 0.82);
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 999, 998;
+    -fx-border-color: rgba(179, 228, 255, 0.24);
+    -fx-border-radius: 999;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 12, 0.24, 0, 6);
 }

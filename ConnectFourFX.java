@@ -48,6 +48,7 @@ public class ConnectFourFX extends Application {
     private static final int WIN_LENGTH = 4;
     private static final int MAX_SCORE = 1_000_000;
     private static final int[] COLUMN_ORDER = {3, 2, 4, 1, 5, 0, 6};
+    private static final Interpolator OUTLOOK_METER_INTERPOLATOR = Interpolator.SPLINE(0.42, 0.0, 0.18, 1.0);
 
     private static final char EMPTY = ' ';
     private static final char HUMAN_MARK = 'X';
@@ -82,6 +83,7 @@ public class ConnectFourFX extends Application {
     private MovePopup pendingMovePopup;
     private Animation activeMoveFeedbackAnimation;
     private Label activeMoveFeedbackLabel;
+    private Animation activeFavorMeterAnimation;
 
     private boolean humanTurn;
     private boolean busy;
@@ -106,16 +108,18 @@ public class ConnectFourFX extends Application {
 
         Pane atmosphere = buildAtmosphere();
         VBox layout = new VBox(20);
+        layout.getStyleClass().add("app-shell");
         layout.setPadding(new Insets(28, 34, 32, 34));
         layout.setFillWidth(true);
 
         VBox topSection = new VBox(18, buildHeader(), buildStatusCard());
+        topSection.getStyleClass().add("hero-stack");
         topSection.setAlignment(Pos.CENTER);
         topSection.setMaxWidth(Double.MAX_VALUE);
 
         StackPane boardCard = new StackPane(buildBoardView());
-        boardCard.getStyleClass().add("glass-card");
-        boardCard.setPadding(new Insets(22, 24, 22, 24));
+        boardCard.getStyleClass().addAll("glass-card", "board-card");
+        boardCard.setPadding(new Insets(28, 30, 30, 30));
         boardCard.setAlignment(Pos.CENTER);
         boardCard.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
@@ -143,22 +147,32 @@ public class ConnectFourFX extends Application {
         Pane atmosphere = new Pane();
         atmosphere.setMouseTransparent(true);
 
-        Circle leftGlow = new Circle(210, Color.rgb(73, 226, 255, 0.18));
-        leftGlow.setTranslateX(-340);
-        leftGlow.setTranslateY(-220);
-        leftGlow.setEffect(new GaussianBlur(140));
+        Circle leftGlow = new Circle(230, Color.rgb(83, 214, 255, 0.16));
+        leftGlow.setTranslateX(-360);
+        leftGlow.setTranslateY(-230);
+        leftGlow.setEffect(new GaussianBlur(150));
 
-        Circle rightGlow = new Circle(240, Color.rgb(255, 151, 79, 0.22));
-        rightGlow.setTranslateX(360);
-        rightGlow.setTranslateY(-140);
-        rightGlow.setEffect(new GaussianBlur(160));
+        Circle upperGlow = new Circle(180, Color.rgb(93, 108, 255, 0.10));
+        upperGlow.setTranslateX(40);
+        upperGlow.setTranslateY(-310);
+        upperGlow.setEffect(new GaussianBlur(130));
 
-        Circle lowerGlow = new Circle(280, Color.rgb(49, 94, 255, 0.16));
-        lowerGlow.setTranslateX(-120);
-        lowerGlow.setTranslateY(280);
-        lowerGlow.setEffect(new GaussianBlur(180));
+        Circle rightGlow = new Circle(250, Color.rgb(255, 160, 94, 0.14));
+        rightGlow.setTranslateX(380);
+        rightGlow.setTranslateY(-170);
+        rightGlow.setEffect(new GaussianBlur(170));
 
-        atmosphere.getChildren().addAll(leftGlow, rightGlow, lowerGlow);
+        Circle lowerGlow = new Circle(310, Color.rgb(44, 116, 255, 0.14));
+        lowerGlow.setTranslateX(-150);
+        lowerGlow.setTranslateY(300);
+        lowerGlow.setEffect(new GaussianBlur(190));
+
+        Circle lowerRightGlow = new Circle(220, Color.rgb(56, 214, 255, 0.10));
+        lowerRightGlow.setTranslateX(280);
+        lowerRightGlow.setTranslateY(320);
+        lowerRightGlow.setEffect(new GaussianBlur(150));
+
+        atmosphere.getChildren().addAll(leftGlow, upperGlow, rightGlow, lowerGlow, lowerRightGlow);
         return atmosphere;
     }
 
@@ -167,13 +181,16 @@ public class ConnectFourFX extends Application {
         eyebrow.getStyleClass().add("eyebrow-label");
 
         Label title = new Label("Connect Four");
-        title.setFont(Font.font("Trebuchet MS", FontWeight.EXTRA_BOLD, 40));
+        title.setFont(Font.font("Trebuchet MS", FontWeight.EXTRA_BOLD, 48));
         title.getStyleClass().add("title-label");
 
         Label subtitle = new Label("Click a column, watch the disc fall, and try to outplay the AI.");
         subtitle.getStyleClass().add("subtitle-label");
+        subtitle.setWrapText(true);
+        subtitle.setMaxWidth(680);
 
-        VBox header = new VBox(8, eyebrow, title, subtitle);
+        VBox header = new VBox(10, eyebrow, title, subtitle);
+        header.getStyleClass().add("hero-block");
         header.setAlignment(Pos.CENTER);
         return header;
     }
@@ -200,13 +217,15 @@ public class ConnectFourFX extends Application {
         meterTrack.setArcHeight(18.0);
         meterTrack.setFill(new LinearGradient(
             0.0, 0.0, 1.0, 0.0, true, CycleMethod.NO_CYCLE,
-            new Stop(0.0, Color.web("#f4684d")),
-            new Stop(0.46, Color.web("#17356f")),
-            new Stop(0.54, Color.web("#17356f")),
-            new Stop(1.0, Color.web("#f4b327"))
+            new Stop(0.0, Color.web("#ff6c58")),
+            new Stop(0.18, Color.web("#cb4b3b")),
+            new Stop(0.48, Color.web("#22314b")),
+            new Stop(0.52, Color.web("#1a263c")),
+            new Stop(0.82, Color.web("#b98727")),
+            new Stop(1.0, Color.web("#ffcf66"))
         ));
-        meterTrack.setStroke(Color.rgb(210, 236, 255, 0.20));
-        meterTrack.setStrokeWidth(1.1);
+        meterTrack.setStroke(Color.rgb(225, 242, 255, 0.18));
+        meterTrack.setStrokeWidth(1.0);
 
         Rectangle meterGloss = new Rectangle();
         meterGloss.setHeight(18.0);
@@ -222,16 +241,16 @@ public class ConnectFourFX extends Application {
         Rectangle centerMarker = new Rectangle(2.5, 26.0);
         centerMarker.setArcWidth(2.5);
         centerMarker.setArcHeight(2.5);
-        centerMarker.setFill(Color.rgb(255, 255, 255, 0.56));
+        centerMarker.setFill(Color.rgb(255, 255, 255, 0.40));
         centerMarker.setMouseTransparent(true);
 
         Rectangle favorIndicator = new Rectangle(9.0, 32.0);
         favorIndicator.setArcWidth(9.0);
         favorIndicator.setArcHeight(9.0);
-        favorIndicator.setFill(Color.rgb(245, 250, 255, 0.96));
-        favorIndicator.setStroke(Color.rgb(12, 30, 72, 0.46));
+        favorIndicator.setFill(Color.rgb(244, 248, 255, 0.92));
+        favorIndicator.setStroke(Color.rgb(17, 34, 72, 0.38));
         favorIndicator.setStrokeWidth(1.0);
-        favorIndicator.setEffect(new DropShadow(10.0, Color.rgb(0, 0, 0, 0.28)));
+        favorIndicator.setEffect(new DropShadow(12.0, Color.rgb(8, 12, 22, 0.34)));
         favorIndicator.setMouseTransparent(true);
 
         StackPane meterPane = new StackPane(meterTrack, meterGloss, centerMarker, favorIndicator);
@@ -248,6 +267,7 @@ public class ConnectFourFX extends Application {
         HBox.setHgrow(leftSpacer, Priority.ALWAYS);
         HBox.setHgrow(rightSpacer, Priority.ALWAYS);
         HBox legend = new HBox(10, humanSideLabel, leftSpacer, favorLabel, rightSpacer, aiSideLabel);
+        legend.getStyleClass().add("meter-legend");
         legend.setAlignment(Pos.CENTER);
         legend.setMaxWidth(Double.MAX_VALUE);
 
@@ -259,10 +279,10 @@ public class ConnectFourFX extends Application {
             meterPane,
             legend
         );
-        card.getStyleClass().add("glass-card");
+        card.getStyleClass().addAll("glass-card", "status-card");
         card.setAlignment(Pos.CENTER);
-        card.setPadding(new Insets(18, 24, 18, 24));
-        card.setMaxWidth(620);
+        card.setPadding(new Insets(22, 28, 24, 28));
+        card.setMaxWidth(680);
 
         meterTrack.widthProperty().bind(card.widthProperty().subtract(72.0));
         meterGloss.widthProperty().bind(meterTrack.widthProperty());
@@ -281,9 +301,11 @@ public class ConnectFourFX extends Application {
         refreshRestartButton();
 
         FlowPane controls = new FlowPane(14, 12, restartButton);
+        controls.getStyleClass().add("controls-row");
         controls.setAlignment(Pos.CENTER);
         controls.setRowValignment(javafx.geometry.VPos.CENTER);
         controls.setMaxWidth(Double.MAX_VALUE);
+        controls.setPadding(new Insets(4, 0, 0, 0));
         return controls;
     }
 
@@ -291,40 +313,64 @@ public class ConnectFourFX extends Application {
         boardSurface = new Pane();
         boardSurface.setPrefSize(SURFACE_WIDTH, SURFACE_HEIGHT);
 
-        Rectangle boardAura = new Rectangle(BOARD_X - 14, BOARD_Y - 14, BOARD_WIDTH + 28, BOARD_HEIGHT + 28);
-        boardAura.setArcWidth(54);
-        boardAura.setArcHeight(54);
-        boardAura.setFill(Color.rgb(61, 168, 255, 0.16));
-        boardAura.setEffect(new GaussianBlur(28));
+        Rectangle boardAura = new Rectangle(BOARD_X - 28, BOARD_Y - 28, BOARD_WIDTH + 56, BOARD_HEIGHT + 56);
+        boardAura.setArcWidth(84);
+        boardAura.setArcHeight(84);
+        boardAura.setFill(Color.rgb(78, 204, 255, 0.14));
+        boardAura.setEffect(new GaussianBlur(42));
+
+        Rectangle boardShell = new Rectangle(BOARD_X - 12, BOARD_Y - 12, BOARD_WIDTH + 24, BOARD_HEIGHT + 24);
+        boardShell.setArcWidth(56);
+        boardShell.setArcHeight(56);
+        boardShell.setFill(new LinearGradient(
+            0.0, 0.0, 1.0, 1.0, true, CycleMethod.NO_CYCLE,
+            new Stop(0.0, Color.web("#1f2f4f")),
+            new Stop(0.48, Color.web("#111c33")),
+            new Stop(1.0, Color.web("#070d18"))
+        ));
+        boardShell.setStroke(Color.rgb(224, 243, 255, 0.12));
+        boardShell.setStrokeWidth(1.4);
+        boardShell.setEffect(new DropShadow(34, Color.rgb(3, 6, 14, 0.52)));
 
         Rectangle boardBody = new Rectangle(BOARD_X, BOARD_Y, BOARD_WIDTH, BOARD_HEIGHT);
-        boardBody.setArcWidth(44);
-        boardBody.setArcHeight(44);
+        boardBody.setArcWidth(46);
+        boardBody.setArcHeight(46);
         boardBody.setFill(new LinearGradient(
             0.0, 0.0, 1.0, 1.0, true, CycleMethod.NO_CYCLE,
-            new Stop(0.0, Color.web("#2f6fff")),
-            new Stop(0.55, Color.web("#1744b3")),
-            new Stop(1.0, Color.web("#102971"))
+            new Stop(0.0, Color.web("#264fdb")),
+            new Stop(0.30, Color.web("#1a40b8")),
+            new Stop(0.68, Color.web("#132c7c")),
+            new Stop(1.0, Color.web("#0b1636"))
         ));
-        boardBody.setStroke(Color.rgb(194, 233, 255, 0.32));
+        boardBody.setStroke(Color.rgb(188, 229, 255, 0.22));
         boardBody.setStrokeWidth(2.0);
-        boardBody.setEffect(new DropShadow(26, Color.rgb(7, 12, 34, 0.42)));
 
         Rectangle boardGloss = new Rectangle(BOARD_X + 10, BOARD_Y + 10, BOARD_WIDTH - 20, 98);
         boardGloss.setArcWidth(34);
         boardGloss.setArcHeight(34);
         boardGloss.setFill(new LinearGradient(
             0.0, 0.0, 0.0, 1.0, true, CycleMethod.NO_CYCLE,
-            new Stop(0.0, Color.rgb(255, 255, 255, 0.22)),
+            new Stop(0.0, Color.rgb(255, 255, 255, 0.28)),
+            new Stop(0.35, Color.rgb(189, 226, 255, 0.12)),
             new Stop(1.0, Color.rgb(255, 255, 255, 0.0))
         ));
 
-        boardSurface.getChildren().addAll(boardAura, boardBody, boardGloss);
+        Rectangle boardLowerSheen = new Rectangle(BOARD_X + 20, BOARD_Y + BOARD_HEIGHT - 128, BOARD_WIDTH - 40, 96);
+        boardLowerSheen.setArcWidth(32);
+        boardLowerSheen.setArcHeight(32);
+        boardLowerSheen.setFill(new LinearGradient(
+            0.0, 0.0, 0.0, 1.0, true, CycleMethod.NO_CYCLE,
+            new Stop(0.0, Color.rgb(255, 255, 255, 0.0)),
+            new Stop(1.0, Color.rgb(108, 198, 255, 0.10))
+        ));
+
+        boardSurface.getChildren().addAll(boardAura, boardShell, boardBody, boardGloss, boardLowerSheen);
 
         buildColumnChrome();
         buildSlots();
 
         previewDisc = createDiscNode(HUMAN_MARK, true);
+        previewDisc.setOpacity(0.92);
         previewDisc.setVisible(false);
         boardSurface.getChildren().add(previewDisc);
 
@@ -342,6 +388,7 @@ public class ConnectFourFX extends Application {
         Group boardGroup = new Group(boardSurface);
 
         StackPane wrapper = new StackPane(boardGroup);
+        wrapper.getStyleClass().add("board-wrapper");
         wrapper.setPadding(new Insets(8));
         wrapper.setMinSize(0.0, 0.0);
         wrapper.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -370,8 +417,11 @@ public class ConnectFourFX extends Application {
 
             Label label = new Label(String.valueOf(column + 1));
             label.getStyleClass().add("column-label");
-            label.setLayoutX(x - 6);
-            label.setLayoutY(22);
+            label.setAlignment(Pos.CENTER);
+            label.setMinSize(32.0, 32.0);
+            label.setPrefSize(32.0, 32.0);
+            label.setLayoutX(x - 16.0);
+            label.setLayoutY(18.0);
 
             Rectangle glow = new Rectangle(
                 BOARD_X + column * CELL_SIZE + 8,
@@ -383,8 +433,9 @@ public class ConnectFourFX extends Application {
             glow.setArcHeight(28);
             glow.setFill(new LinearGradient(
                 0.0, 0.0, 0.0, 1.0, true, CycleMethod.NO_CYCLE,
-                new Stop(0.0, Color.rgb(255, 255, 255, 0.18)),
-                new Stop(1.0, Color.rgb(255, 255, 255, 0.03))
+                new Stop(0.0, Color.rgb(138, 224, 255, 0.34)),
+                new Stop(0.28, Color.rgb(83, 182, 255, 0.16)),
+                new Stop(1.0, Color.rgb(40, 68, 128, 0.02))
             ));
             glow.setOpacity(0.0);
 
@@ -402,8 +453,10 @@ public class ConnectFourFX extends Application {
                 Circle bezel = new Circle(DISC_RADIUS + 6.0);
                 bezel.setCenterX(centerX);
                 bezel.setCenterY(centerY);
-                bezel.setFill(Color.rgb(7, 18, 56, 0.38));
-                bezel.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.28)));
+                bezel.setFill(Color.rgb(4, 10, 27, 0.62));
+                bezel.setStroke(Color.rgb(181, 229, 255, 0.09));
+                bezel.setStrokeWidth(1.0);
+                bezel.setEffect(new DropShadow(12, Color.rgb(0, 0, 0, 0.34)));
 
                 Circle disc = new Circle(DISC_RADIUS);
                 disc.setCenterX(centerX);
@@ -414,7 +467,7 @@ public class ConnectFourFX extends Application {
                 Circle sparkle = new Circle(DISC_RADIUS - 18.0);
                 sparkle.setCenterX(centerX - 10.0);
                 sparkle.setCenterY(centerY - 10.0);
-                sparkle.setFill(Color.rgb(255, 255, 255, 0.09));
+                sparkle.setFill(Color.rgb(255, 255, 255, 0.06));
                 sparkle.setMouseTransparent(true);
 
                 boardSurface.getChildren().addAll(bezel, disc, sparkle);
@@ -712,7 +765,7 @@ public class ConnectFourFX extends Application {
         for (int column = 0; column < COLUMNS; column++) {
             boolean playable = !isColumnFull(heights, column);
             boolean active = inputEnabled && playable && hoveredColumn == column;
-            hoverHighlights[column].setOpacity(active ? 1.0 : (playable && inputEnabled ? 0.10 : 0.03));
+            hoverHighlights[column].setOpacity(active ? 0.92 : (playable && inputEnabled ? 0.08 : 0.02));
         }
 
         previewDisc.setVisible(inputEnabled && hoveredColumn >= 0 && !isColumnFull(heights, hoveredColumn));
@@ -753,7 +806,37 @@ public class ConnectFourFX extends Application {
             favorLabel.setText(describeOutlook(balance));
         }
 
-        favorBalance.set(balance);
+        animateFavorBalance(balance);
+    }
+
+    private void animateFavorBalance(double targetBalance) {
+        double clampedTarget = clamp(targetBalance, 0.0, 1.0);
+
+        if (activeFavorMeterAnimation != null) {
+            activeFavorMeterAnimation.stop();
+            activeFavorMeterAnimation = null;
+        }
+
+        if (Math.abs(favorBalance.get() - clampedTarget) < 0.0001) {
+            favorBalance.set(clampedTarget);
+            return;
+        }
+
+        Timeline meterAnimation = new Timeline(
+            new KeyFrame(
+                Duration.millis(560),
+                new KeyValue(favorBalance, clampedTarget, OUTLOOK_METER_INTERPOLATOR)
+            )
+        );
+
+        activeFavorMeterAnimation = meterAnimation;
+        meterAnimation.setOnFinished(event -> {
+            favorBalance.set(clampedTarget);
+            if (activeFavorMeterAnimation == meterAnimation) {
+                activeFavorMeterAnimation = null;
+            }
+        });
+        meterAnimation.play();
     }
 
     private String describeOutlook(double balance) {
@@ -788,6 +871,10 @@ public class ConnectFourFX extends Application {
         if (activeDropAnimation != null) {
             activeDropAnimation.stop();
             activeDropAnimation = null;
+        }
+        if (activeFavorMeterAnimation != null) {
+            activeFavorMeterAnimation.stop();
+            activeFavorMeterAnimation = null;
         }
         clearActiveMoveFeedbackPopup();
         pendingMovePopup = null;
@@ -973,61 +1060,61 @@ public class ConnectFourFX extends Application {
         if (mark == HUMAN_MARK) {
             disc.setFill(buildDiscGradient(
                 preview ? 0.42 : 1.0,
-                Color.web("#fff2cb"),
-                Color.web("#ff9570"),
-                Color.web("#ed4f39"),
-                Color.web("#9b1e22")
+                Color.web("#ffe9d7"),
+                Color.web("#ff9d80"),
+                Color.web("#ff6146"),
+                Color.web("#8b1622")
             ));
-            DropShadow shadow = new DropShadow(preview ? 18.0 : 24.0, Color.rgb(255, 88, 68, preview ? 0.28 : 0.48));
+            DropShadow shadow = new DropShadow(preview ? 18.0 : 24.0, Color.rgb(255, 98, 77, preview ? 0.30 : 0.52));
             shadow.setOffsetY(8.0);
-            shadow.setSpread(0.18);
+            shadow.setSpread(0.20);
             disc.setEffect(winning
                 ? buildWinnerEffect(
                     shadow,
-                    Color.rgb(255, 247, 221, 0.92),
-                    Color.rgb(255, 171, 119, 0.56)
+                    Color.rgb(255, 246, 228, 0.94),
+                    Color.rgb(255, 145, 102, 0.58)
                 )
                 : shadow
             );
             disc.setStroke(winning
-                ? Color.rgb(255, 252, 241, 0.96)
-                : Color.rgb(255, 248, 231, preview ? 0.30 : 0.72)
+                ? Color.rgb(255, 252, 243, 0.96)
+                : Color.rgb(255, 244, 230, preview ? 0.34 : 0.76)
             );
             disc.setStrokeWidth(winning ? 4.4 : (preview ? 2.0 : 2.6));
         } else if (mark == AI_MARK) {
             disc.setFill(buildDiscGradient(
                 preview ? 0.42 : 1.0,
-                Color.web("#fff7b5"),
-                Color.web("#ffd766"),
-                Color.web("#f8b21d"),
-                Color.web("#a95f09")
+                Color.web("#fff6cf"),
+                Color.web("#ffdb7b"),
+                Color.web("#f6b93a"),
+                Color.web("#8c4f0c")
             ));
-            DropShadow shadow = new DropShadow(preview ? 18.0 : 24.0, Color.rgb(255, 196, 56, preview ? 0.26 : 0.44));
+            DropShadow shadow = new DropShadow(preview ? 18.0 : 24.0, Color.rgb(255, 198, 72, preview ? 0.28 : 0.48));
             shadow.setOffsetY(8.0);
-            shadow.setSpread(0.18);
+            shadow.setSpread(0.20);
             disc.setEffect(winning
                 ? buildWinnerEffect(
                     shadow,
-                    Color.rgb(255, 248, 210, 0.92),
-                    Color.rgb(255, 220, 94, 0.58)
+                    Color.rgb(255, 247, 216, 0.94),
+                    Color.rgb(255, 209, 88, 0.60)
                 )
                 : shadow
             );
             disc.setStroke(winning
-                ? Color.rgb(255, 252, 232, 0.96)
-                : Color.rgb(255, 252, 232, preview ? 0.24 : 0.68)
+                ? Color.rgb(255, 252, 234, 0.96)
+                : Color.rgb(255, 248, 220, preview ? 0.28 : 0.72)
             );
             disc.setStrokeWidth(winning ? 4.4 : (preview ? 2.0 : 2.6));
         } else {
             disc.setFill(new RadialGradient(
                 0.0, 0.0, 0.35, 0.35, 0.8, true, CycleMethod.NO_CYCLE,
-                new Stop(0.0, Color.rgb(36, 63, 139, 0.34)),
-                new Stop(0.75, Color.rgb(11, 26, 74, 0.84)),
-                new Stop(1.0, Color.rgb(5, 14, 44, 0.96))
+                new Stop(0.0, Color.rgb(59, 86, 166, 0.26)),
+                new Stop(0.72, Color.rgb(11, 22, 61, 0.92)),
+                new Stop(1.0, Color.rgb(4, 11, 29, 0.98))
             ));
-            disc.setStroke(Color.rgb(126, 191, 255, 0.13));
-            disc.setStrokeWidth(1.5);
-            disc.setEffect(new DropShadow(12.0, Color.rgb(0, 0, 0, 0.26)));
+            disc.setStroke(Color.rgb(143, 202, 255, 0.12));
+            disc.setStrokeWidth(1.3);
+            disc.setEffect(new DropShadow(12.0, Color.rgb(0, 0, 0, 0.32)));
         }
     }
 
@@ -1065,8 +1152,7 @@ public class ConnectFourFX extends Application {
         List<MoveOption> moveOptions = new ArrayList<MoveOption>();
 
         for (int column : playableColumns) {
-            int score = scoreHumanCandidateMove(boardState, columnHeights, column, searchDepth);
-            moveOptions.add(new MoveOption(column, score));
+            moveOptions.add(analyzeHumanCandidateMove(boardState, columnHeights, column, searchDepth));
         }
 
         MoveOption bestMove = moveOptions.get(0);
@@ -1075,10 +1161,10 @@ public class ConnectFourFX extends Application {
         int betterMoveCount = 0;
 
         for (MoveOption option : moveOptions) {
-            if (option.score < bestMove.score) {
+            if (isMoveBetter(option, bestMove)) {
                 bestMove = option;
             }
-            if (option.score > worstMove.score) {
+            if (isMoveBetter(worstMove, option)) {
                 worstMove = option;
             }
             if (option.column == chosenColumn) {
@@ -1087,7 +1173,7 @@ public class ConnectFourFX extends Application {
         }
 
         for (MoveOption option : moveOptions) {
-            if (option.score < chosenMove.score) {
+            if (isMoveBetter(option, chosenMove)) {
                 betterMoveCount++;
             }
         }
@@ -1097,12 +1183,15 @@ public class ConnectFourFX extends Application {
             bestMove.score,
             worstMove.score,
             betterMoveCount,
-            playableColumns.size()
+            playableColumns.size(),
+            chosenMove.aiImmediateWinningReplies,
+            bestMove.aiImmediateWinningReplies
         );
     }
 
-    private int scoreHumanCandidateMove(char[][] boardState, int[] columnHeights, int column, int searchDepth) {
+    private MoveOption analyzeHumanCandidateMove(char[][] boardState, int[] columnHeights, int column, int searchDepth) {
         int row = dropPiece(boardState, columnHeights, column, HUMAN_MARK);
+        int aiImmediateWinningReplies = getImmediateWinningMoves(boardState, columnHeights, AI_MARK).size();
         int score;
 
         if (isWinningMove(boardState, row, column, HUMAN_MARK)) {
@@ -1114,7 +1203,17 @@ public class ConnectFourFX extends Application {
         }
 
         undoMove(boardState, columnHeights, column);
-        return score;
+        return new MoveOption(column, score, aiImmediateWinningReplies);
+    }
+
+    private boolean isMoveBetter(MoveOption candidate, MoveOption reference) {
+        if (candidate.score != reference.score) {
+            return candidate.score < reference.score;
+        }
+        if (candidate.aiImmediateWinningReplies != reference.aiImmediateWinningReplies) {
+            return candidate.aiImmediateWinningReplies < reference.aiImmediateWinningReplies;
+        }
+        return candidate.column < reference.column;
     }
 
     private MoveFeedback describeHumanMove(
@@ -1122,7 +1221,9 @@ public class ConnectFourFX extends Application {
         int bestScore,
         int worstScore,
         int betterMoveCount,
-        int legalMoveCount
+        int legalMoveCount,
+        int chosenAiImmediateWinningReplies,
+        int bestAiImmediateWinningReplies
     ) {
         int rank = betterMoveCount + 1;
         int scoreLoss = Math.max(0, chosenScore - bestScore);
@@ -1137,6 +1238,36 @@ public class ConnectFourFX extends Application {
         boolean hurtsPosition = lossRatio >= 0.60
             || scoreLoss >= 650
             || (rank >= nearWorstRank && scoreLoss >= 350);
+        boolean allowsImmediateAiWin = chosenAiImmediateWinningReplies > 0;
+        boolean bestMoveAvoidsImmediateAiWin = bestAiImmediateWinningReplies == 0;
+
+        if (allowsImmediateAiWin) {
+            if (bestMoveAvoidsImmediateAiWin || chosenAiImmediateWinningReplies > bestAiImmediateWinningReplies) {
+                return new MoveFeedback(
+                    "Blunder",
+                    "grade-blunder"
+                );
+            }
+
+            if (chosenScore == bestScore && chosenAiImmediateWinningReplies == bestAiImmediateWinningReplies) {
+                return new MoveFeedback(
+                    "Average",
+                    "grade-average"
+                );
+            }
+
+            if (nearWorstMove || hurtsPosition) {
+                return new MoveFeedback(
+                    "Blunder",
+                    "grade-blunder"
+                );
+            }
+
+            return new MoveFeedback(
+                "Bad",
+                "grade-bad"
+            );
+        }
 
         if (chosenScore == bestScore) {
             if (chosenScore <= -MAX_SCORE / 2) {
@@ -1593,10 +1724,12 @@ public class ConnectFourFX extends Application {
     private static class MoveOption {
         private final int column;
         private final int score;
+        private final int aiImmediateWinningReplies;
 
-        private MoveOption(int column, int score) {
+        private MoveOption(int column, int score, int aiImmediateWinningReplies) {
             this.column = column;
             this.score = score;
+            this.aiImmediateWinningReplies = aiImmediateWinningReplies;
         }
     }
 
