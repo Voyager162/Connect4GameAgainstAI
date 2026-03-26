@@ -1,0 +1,11 @@
+*.class
+build/
+dist/
+javafx-sdk/
+hs_err_pid*
+
+.idea/
+.vscode/
+*.iml
+Thumbs.db
+.DS_Store
