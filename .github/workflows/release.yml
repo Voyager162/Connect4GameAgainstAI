@@ -10,10 +10,25 @@ permissions:
   contents: write
 
 jobs:
-  windows-release:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            javafx_classifier: win
+            artifact_name: connect-four-fx-windows-x64
+          - os: macos-13
+            javafx_classifier: mac
+            artifact_name: connect-four-fx-macos-x64
+          - os: macos-14
+            javafx_classifier: mac-aarch64
+            artifact_name: connect-four-fx-macos-arm64
+
+    runs-on: ${{ matrix.os }}
     env:
       JAVAFX_VERSION: 22.0.1
+      JAVAFX_CLASSIFIER: ${{ matrix.javafx_classifier }}
 
     steps:
       - name: Check out repository
@@ -50,26 +65,36 @@ jobs:
           )
 
           foreach ($artifact in $artifacts) {
-            $fileName = "$artifact-$env:JAVAFX_VERSION-win.jar"
+            $fileName = "$artifact-$env:JAVAFX_VERSION-$env:JAVAFX_CLASSIFIER.jar"
             $uri = "$baseUrl/$artifact/$env:JAVAFX_VERSION/$fileName"
             Invoke-WebRequest -Uri $uri -OutFile (Join-Path $libDir $fileName)
           }
 
           "JAVAFX_LIB=$libDir" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Package Windows app
-        shell: cmd
-        run: package-app.bat
+      - name: Package app
+        shell: pwsh
+        run: .\package-app.ps1
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: connect-four-fx-windows
+          name: ${{ matrix.artifact_name }}
           path: dist/*.zip
 
-      - name: Publish GitHub release asset
-        if: startsWith(github.ref, 'refs/tags/')
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Publish GitHub release assets
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.zip
+          files: release-artifacts/**/*.zip
           generate_release_notes: true

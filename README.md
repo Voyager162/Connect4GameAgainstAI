@@ -9,8 +9,9 @@
 - `connect-four.css`: styling for the desktop app
 - `run-game.bat`: compile and run the JavaFX desktop app locally
 - `run-terminal.bat`: compile and run the terminal version locally
-- `package-app.bat`: build a Windows app image and a portable zip release
-- `.github/workflows/release.yml`: GitHub Actions workflow that builds a downloadable Windows release from tags
+- `package-app.ps1`: cross-platform packaging script used for local builds and GitHub Actions
+- `package-app.bat`: Windows wrapper for the packaging script
+- `.github/workflows/release.yml`: GitHub Actions workflow that builds downloadable Windows and macOS releases from tags
 
 ## Gameplay Notes
 
@@ -26,15 +27,15 @@
 
 ### Prerequisites
 
-- Windows
+- Windows or macOS
 - JDK 17 or newer
-- JavaFX runtime jars for Windows
+- JavaFX runtime jars for your platform
 
 You can point the scripts at JavaFX in either of these ways:
 
 1. Set `JAVAFX_LIB` to a folder containing either:
    - `javafx.base.jar`, `javafx.graphics.jar`, `javafx.controls.jar`
-   - or `javafx-base-<version>-win.jar`, `javafx-graphics-<version>-win.jar`, `javafx-controls-<version>-win.jar`
+   - or `javafx-base-<version>-<platform>.jar`, `javafx-graphics-<version>-<platform>.jar`, `javafx-controls-<version>-<platform>.jar`
 2. Or place those jars inside `javafx-sdk\lib` in the repo root
 
 Example PowerShell session:
@@ -58,24 +59,24 @@ Terminal app:
 .\run-terminal.bat
 ```
 
-## Build A Downloadable Windows Release
+## Build A Downloadable Release
 
 Run:
 
 ```powershell
-.\package-app.bat
+.\package-app.ps1
 ```
 
 That creates:
 
-- `dist\Connect Four FX\`: the packaged Windows app image, including `Connect Four FX.exe`
-- `dist\Connect Four FX-<version>-portable.zip`: a zip file you can upload to a GitHub release
+- on Windows: `dist\Connect Four FX\` plus a zip like `Connect Four FX-<version>-portable.zip`
+- on macOS: `dist/Connect Four FX.app` plus a zip like `Connect Four FX-<version>-macos-<arch>.zip`
 
 You can override the app version before running the packaging script:
 
 ```powershell
 $env:APP_VERSION = "1.0.0"
-.\package-app.bat
+.\package-app.ps1
 ```
 
 Tags like `v1.0.0` are also fine; the packaging script will normalize that to the numeric version format required by `jpackage`.
@@ -84,12 +85,16 @@ Tags like `v1.0.0` are also fine; the packaging script will normalize that to th
 
 This repo includes a GitHub Actions workflow that:
 
-- runs on Windows
+- runs on Windows and macOS
 - installs Java
 - downloads the required JavaFX jars
-- builds the portable release zip
-- uploads the zip to the workflow run
-- automatically attaches the zip to a GitHub Release when you push a tag like `v1.0.0`
+- builds release zips for Windows x64, macOS Intel, and macOS Apple Silicon
+- uploads the build artifacts
+- automatically attaches the zips to a GitHub Release when you push a tag like `v1.0.0`
+
+## macOS Note
+
+The macOS app can be built and downloaded from GitHub Releases, but it is not code signed or notarized yet. That means macOS may show an "unidentified developer" warning the first time someone opens it.
 
 ## Recommended Publishing Checklist
 
