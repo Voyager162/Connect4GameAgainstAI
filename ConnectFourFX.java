@@ -1369,14 +1369,25 @@ public class ConnectFourFX extends Application {
     }
 
     private int chooseAiSearchDepth(int[] columnHeights, AiDifficulty difficulty) {
-        int baseDepth = chooseSearchDepth(columnHeights);
-        return Math.max(difficulty.minimumSearchDepth, baseDepth + difficulty.depthOffset);
+        if (difficulty == AiDifficulty.IMPOSSIBLE) {
+            return chooseSearchDepth(columnHeights);
+        }
+
+        int baseDepth = chooseSearchDepth(columnHeights) + difficulty.depthOffset;
+        return Math.max(difficulty.minimumSearchDepth, Math.min(difficulty.maximumSearchDepth, baseDepth));
     }
 
     private AiChoice chooseAiMove(char[][] boardState, int[] columnHeights, int searchDepth, AiDifficulty difficulty) {
+        if (difficulty == AiDifficulty.IMPOSSIBLE) {
+            return chooseBestMove(boardState, columnHeights, searchDepth);
+        }
+
         List<Integer> aiWinningMoves = getImmediateWinningMoves(boardState, columnHeights, AI_MARK);
         if (!aiWinningMoves.isEmpty()) {
-            return new AiChoice(aiWinningMoves.get(0).intValue(), MAX_SCORE);
+            if (random.nextDouble() < difficulty.winChance) {
+                return new AiChoice(aiWinningMoves.get(0).intValue(), MAX_SCORE);
+            }
+            return chooseImperfectAiMove(boardState, columnHeights, searchDepth, difficulty, aiWinningMoves);
         }
 
         List<Integer> humanWinningMoves = getImmediateWinningMoves(boardState, columnHeights, HUMAN_MARK);
@@ -1385,14 +1396,10 @@ public class ConnectFourFX extends Application {
             if (difficulty.blockChance >= 1.0 || random.nextDouble() < difficulty.blockChance) {
                 return new AiChoice(blockingColumn, 0);
             }
-            return chooseImperfectAiMove(boardState, columnHeights, searchDepth, difficulty, blockingColumn);
+            return chooseImperfectAiMove(boardState, columnHeights, searchDepth, difficulty, humanWinningMoves);
         }
 
-        if (difficulty == AiDifficulty.IMPOSSIBLE || difficulty == AiDifficulty.HARD) {
-            return chooseBestMove(boardState, columnHeights, searchDepth);
-        }
-
-        return chooseImperfectAiMove(boardState, columnHeights, searchDepth, difficulty, -1);
+        return chooseImperfectAiMove(boardState, columnHeights, searchDepth, difficulty, new ArrayList<Integer>());
     }
 
     private AiChoice chooseImperfectAiMove(
@@ -1400,38 +1407,60 @@ public class ConnectFourFX extends Application {
         int[] columnHeights,
         int searchDepth,
         AiDifficulty difficulty,
-        int excludedColumn
+        List<Integer> excludedColumns
     ) {
-        List<AiChoice> rankedMoves = evaluateAiMoves(boardState, columnHeights, searchDepth, excludedColumn);
+        List<AiChoice> rankedMoves = evaluateAiMoves(boardState, columnHeights, searchDepth, excludedColumns);
         if (rankedMoves.isEmpty()) {
-            rankedMoves = evaluateAiMoves(boardState, columnHeights, searchDepth, -1);
+            rankedMoves = evaluateAiMoves(boardState, columnHeights, searchDepth, new ArrayList<Integer>());
         }
         if (rankedMoves.isEmpty() || rankedMoves.size() == 1 || difficulty.bestMoveChance >= 1.0) {
             return rankedMoves.get(0);
         }
 
-        int shortlistSize = Math.min(difficulty.candidateWindow, rankedMoves.size());
-        if (random.nextDouble() < difficulty.bestMoveChance) {
-            return rankedMoves.get(0);
+        List<AiChoice> movePool = rankedMoves;
+        if (random.nextDouble() < difficulty.avoidImmediateLossChance) {
+            List<AiChoice> safeMoves = new ArrayList<AiChoice>();
+            for (AiChoice choice : rankedMoves) {
+                if (choice.humanImmediateWinningReplies == 0) {
+                    safeMoves.add(choice);
+                }
+            }
+            if (!safeMoves.isEmpty()) {
+                movePool = safeMoves;
+            }
         }
 
-        return rankedMoves.get(1 + random.nextInt(shortlistSize - 1));
+        if (movePool.size() == 1) {
+            return movePool.get(0);
+        }
+
+        if (random.nextDouble() < difficulty.randomMoveChance) {
+            return movePool.get(random.nextInt(movePool.size()));
+        }
+
+        if (random.nextDouble() < difficulty.bestMoveChance) {
+            return movePool.get(0);
+        }
+
+        int shortlistSize = Math.min(difficulty.candidateWindow, movePool.size());
+        return movePool.get(1 + random.nextInt(shortlistSize - 1));
     }
 
     private List<AiChoice> evaluateAiMoves(
         char[][] boardState,
         int[] columnHeights,
         int searchDepth,
-        int excludedColumn
+        List<Integer> excludedColumns
     ) {
         List<AiChoice> choices = new ArrayList<AiChoice>();
 
         for (int column : getPlayableColumns(columnHeights)) {
-            if (column == excludedColumn) {
+            if (excludedColumns.contains(Integer.valueOf(column))) {
                 continue;
             }
 
             int row = dropPiece(boardState, columnHeights, column, AI_MARK);
+            int humanImmediateWinningReplies = getImmediateWinningMoves(boardState, columnHeights, HUMAN_MARK).size();
             int score;
 
             if (isWinningMove(boardState, row, column, AI_MARK)) {
@@ -1443,7 +1472,7 @@ public class ConnectFourFX extends Application {
             }
 
             undoMove(boardState, columnHeights, column);
-            choices.add(new AiChoice(column, score));
+            choices.add(new AiChoice(column, score, humanImmediateWinningReplies));
         }
 
         choices.sort((left, right) -> {
@@ -1853,31 +1882,43 @@ public class ConnectFourFX extends Application {
     }
 
     private enum AiDifficulty {
-        EASY("Easy", 0.75, -3, 3, 0.52, 4),
-        MEDIUM("Medium", 0.90, -2, 4, 0.78, 3),
-        HARD("Hard", 1.00, -1, 5, 1.00, 1),
-        IMPOSSIBLE("Impossible", 1.00, 0, 6, 1.00, 1);
+        EASY("Easy", 0.75, 0.62, 0.42, 0.22, 0.36, -5, 1, 2, 7),
+        MEDIUM("Medium", 0.90, 0.94, 0.82, 0.58, 0.10, -4, 2, 4, 5),
+        HARD("Hard", 1.00, 1.00, 1.00, 0.88, 0.00, -2, 4, 6, 3),
+        IMPOSSIBLE("Impossible", 1.00, 1.00, 1.00, 1.00, 0.00, 0, 6, 9, 1);
 
         private final String label;
         private final double blockChance;
+        private final double winChance;
+        private final double avoidImmediateLossChance;
+        private final double bestMoveChance;
+        private final double randomMoveChance;
         private final int depthOffset;
         private final int minimumSearchDepth;
-        private final double bestMoveChance;
+        private final int maximumSearchDepth;
         private final int candidateWindow;
 
         private AiDifficulty(
             String label,
             double blockChance,
+            double winChance,
+            double avoidImmediateLossChance,
+            double bestMoveChance,
+            double randomMoveChance,
             int depthOffset,
             int minimumSearchDepth,
-            double bestMoveChance,
+            int maximumSearchDepth,
             int candidateWindow
         ) {
             this.label = label;
             this.blockChance = blockChance;
+            this.winChance = winChance;
+            this.avoidImmediateLossChance = avoidImmediateLossChance;
+            this.bestMoveChance = bestMoveChance;
+            this.randomMoveChance = randomMoveChance;
             this.depthOffset = depthOffset;
             this.minimumSearchDepth = minimumSearchDepth;
-            this.bestMoveChance = bestMoveChance;
+            this.maximumSearchDepth = maximumSearchDepth;
             this.candidateWindow = candidateWindow;
         }
     }
@@ -1885,10 +1926,16 @@ public class ConnectFourFX extends Application {
     private static class AiChoice {
         private final int column;
         private final int score;
+        private final int humanImmediateWinningReplies;
 
         private AiChoice(int column, int score) {
+            this(column, score, 0);
+        }
+
+        private AiChoice(int column, int score, int humanImmediateWinningReplies) {
             this.column = column;
             this.score = score;
+            this.humanImmediateWinningReplies = humanImmediateWinningReplies;
         }
     }
 

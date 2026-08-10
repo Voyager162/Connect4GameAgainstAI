@@ -245,6 +245,15 @@ mkdir -p "$APP_JAVAFX_DIR"
 cp "$JAVAFX_INPUT_DIR"/* "$APP_JAVAFX_DIR/"
 rewrite_launcher_config "$CONFIG_PATH" "$JAVAFX_PATH_VALUE"
 
+if [ "$FAMILY" = "macos" ]; then
+    if ! command -v codesign &> /dev/null; then
+        echo "Error: Could not find 'codesign'. It is required to ad-hoc sign the macOS app bundle after packaging." >&2
+        exit 1
+    fi
+
+    codesign --force --deep --sign - "$APP_DIR"
+fi
+
 # Create ZIP
 echo "Creating archive..."
 if [ "$FAMILY" = "macos" ]; then

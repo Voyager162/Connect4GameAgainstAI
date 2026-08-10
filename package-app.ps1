@@ -252,6 +252,16 @@ try {
     Copy-Item -Path (Join-Path $javaFxInputDir "*") -Destination $appJavaFxDir -Force
     Rewrite-LauncherConfig -ConfigPath $configPath -JavaFxPathValue $platform.JavaFxPathValue
 
+    if ($platform.Family -eq "macos") {
+        $codesign = Get-Command codesign -ErrorAction SilentlyContinue
+        if ($null -eq $codesign) {
+            throw "Could not find 'codesign'. It is required to ad-hoc sign the macOS app bundle after packaging."
+        }
+
+        & $codesign.Source --force --deep --sign - $appDir
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+
     if ($platform.Family -eq "windows") {
         Compress-Archive -Path $appDir -DestinationPath $zipPath -Force
     } else {

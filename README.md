@@ -133,13 +133,13 @@ This repo includes a GitHub Actions workflow that:
 - runs on Windows and macOS
 - installs Java
 - downloads the required JavaFX jars
-- builds release zips for Windows x64 and macOS Apple Silicon
+- builds release zips for Windows x64, macOS Apple Silicon, and macOS Intel
 - uploads the build artifacts
 - automatically attaches the zips to a GitHub Release when you push a tag like `v1.0.0`
 
 ## macOS Note
 
-The macOS app can be built and downloaded from GitHub Releases. Both Intel (x64) and Apple Silicon (ARM64) builds are supported.
+The macOS app can be built and downloaded from GitHub Releases. Both Intel (x64) and Apple Silicon (ARM64) builds are published, so download the asset that matches your Mac.
 
 **Security Warning:** The macOS app is not code signed or notarized yet. That means macOS may show an "unidentified developer" warning the first time someone opens it. To proceed:
 

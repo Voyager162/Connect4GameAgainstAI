@@ -21,6 +21,9 @@ jobs:
           - os: macos-14
             javafx_classifier: mac-aarch64
             artifact_name: connect-four-fx-macos-arm64
+          - os: macos-15-intel
+            javafx_classifier: mac
+            artifact_name: connect-four-fx-macos-x64
 
     runs-on: ${{ matrix.os }}
     env:
